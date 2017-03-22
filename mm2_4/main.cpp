@@ -7,6 +7,49 @@
 // #define DEBUG_MATRIX
 #define DEBUG_STEP
 
+#define EPS 0.0001
+
+// ”словие окончани€
+bool converge(double *xk, double *xkp, int n)
+{
+	double norm = 0;
+	for (int i = 0; i < n; i++)
+	{
+		norm += (xk[i] - xkp[i])*(xk[i] - xkp[i]);
+	}
+	if (sqrt(norm) >= EPS)
+		return false;
+	return true;
+}
+
+/*
+’од метода, где:
+a[n][n] - ћатрица коэффициентов
+x[n], p[n] - “екущее и предыдущее решени€
+b[n] - —толбец правых частей
+¬се перечисленные массивы вещественные и
+должны быть определены в основной программе,
+также в массив x[n] следует поместить начальное
+приближение столбца решений (например, все нули)
+*/
+void gauss_zeidel(int n, double** a, double* b, double* x, double* p){
+	do
+	{
+		for (int i = 0; i < n; i++)
+			p[i] = x[i];
+
+		for (int i = 0; i < n; i++)
+		{
+			double var = 0;
+			for (int j = 0; j < i; j++)
+				var += (a[i][j] * x[j]);
+			for (int j = i + 1; j < n; j++)
+				var += (a[i][j] * p[j]);
+			x[i] = (b[i] - var) / a[i][i];
+		}
+	} while (!converge(x, p, n));
+}
+
 bool Gauss(double **A, double *B, double *x, const int number) // ф-и€ решение системы методом √аусса
 {
 	try
@@ -85,23 +128,82 @@ bool Gauss(double **A, double *B, double *x, const int number) // ф-и€ решение с
 }
 
 inline double U(double x){
-	return sin(x/3.0);
+	return x * sin(x);
 }
 
 inline double U_x(double x){
-	return 1/3.0* cos(x/3.0);
+	return sin(x) + x * cos(x);
+}
+
+void fill_matrix_rhs(double** mt, double* rhs, int nx, int ny, double* u, double* v, double dx, double dy, double dt, double viscosity){
+	int nxy = nx * ny;
+	for (int i = 0; i < nxy; i++)
+	for (int j = 0; j < nxy; j++)
+		mt[i][j] = 0;
+
+	// считаем u на новом шаге, причем u вычисл€етс€ независимо от v
+	for (int i = 0; i < nx; i++){
+		// на нижней границе u = 0
+		mt[i*ny][i*ny] = 1;
+		rhs[i * ny] = 0;
+
+		// на верхней границе u = U(x)
+		mt[i*ny + ny - 1][i*ny + ny - 1] = 1;
+		rhs[i*ny + ny - 1] = U(i*dx);
+	}
+
+	for (int j = 1; j < ny - 1; j++){
+		// на левой границе u = U(0)
+		mt[j][j] = 1;
+		rhs[j] = U(0);
+
+		// на правой границе u_x = 0
+		mt[(nx - 1)*ny + j][(nx - 1)*ny + j] = 1;
+		mt[(nx - 1)*ny + j][(nx - 2)*ny + j] = -1;
+		rhs[(nx - 1)*ny + j] = 0;
+	}
+
+	double max_d1 = 0;
+	double max_d2 = 0;
+	int d1_x = 0, d1_y = 0, d2_x = 0, d2_y = 0;
+
+	double coeff = viscosity / dy / dy;
+	for (int i = 1; i < nx - 1; i++)
+	for (int j = 1; j < ny - 1; j++){
+		int eq_ind = i * ny + j;
+		mt[eq_ind][eq_ind] = 1 / dt + 2 * coeff + u[eq_ind] / dx + v[eq_ind] / dy;
+		mt[eq_ind][eq_ind + 1] = -coeff;
+		mt[eq_ind][eq_ind - 1] = -coeff - v[eq_ind] / dy;
+		mt[eq_ind][eq_ind - ny] = -u[eq_ind] / dx;
+		//double u_u_x = -u[eq_ind] * (u[eq_ind] - u[eq_ind - ny]) / dx;
+		//double v_u_y = -v[eq_ind] * (u[eq_ind] - u[eq_ind - 1]) / dy;
+		rhs[eq_ind] = u[eq_ind] / dt + U(i*dx) * U_x(i*dx);
+
+		/*if (abs(u_u_x) > max_d1){
+			d1_x = i;
+			d1_y = j;
+			max_d1 = abs(u_u_x);
+		}
+		if (abs(v_u_y) > max_d2){
+			d2_x = i;
+			d2_y = j;
+			max_d2 = abs(v_u_y);
+		}*/
+	}
+
+	// printf("MAX ABS: u_x %lf [%d %d] u_y %lf [%d %d]\n", max_d1, d1_x, d1_y, max_d2, d2_x, d2_y);
 }
 
 int main(){
 
 	double length = M_PI;
 	double height = 10;
-	double total_time = 1;
-	int step_num = 10;
+	double total_time = 2;
+	int step_num = 20;
 	double dt = total_time / step_num;
 
 	int nx = 30;
-	int ny = 100;
+	int ny = 80;
 	int nxy = nx*ny;
 
 	double dx = length / (nx - 1.0);
@@ -113,6 +215,8 @@ int main(){
 	double* v = new double[nxy];
 
 	double* new_u = new double[nxy];
+	double* new_solution = new double[nxy];
+
 	double* rhs = new double[nxy];
 
 	for (int i = 0; i < nxy; i++){
@@ -128,45 +232,10 @@ int main(){
 	for (int i = 0; i < nxy; i++)
 		u_matrix_temp[i] = new double[nxy];
 
-	for (int i = 0; i < nxy; i++)
-	for (int j = 0; j < nxy; j++)
-		u_matrix[i][j] = 0;
-	
-	// считаем u на новом шаге, причем u вычисл€етс€ независимо от v
-	for (int i = 0; i < nx; i++){
-		// на нижней границе u = 0
-		u_matrix[i*ny][i*ny] = 1;
-		rhs[i * ny] = 0;
+	fill_matrix_rhs(u_matrix, rhs, nx, ny, u, v, dx, dy, dt, viscosity);
 
-		// на верхней границе u = U(x)
-		u_matrix[i*ny + ny - 1][i*ny + ny - 1] = 1;
-		rhs[i*ny + ny - 1] = U(i*dx);
-	}
-
-	for (int j = 1; j < ny - 1; j++){
-		// на левой границе u = U(0)
-		u_matrix[j][j] = 1;
-		rhs[j] = U(0);
-
-		// на правой границе u_x = 0
-		u_matrix[(nx - 1)*ny + j][(nx - 1)*ny + j] = 1;
-		u_matrix[(nx - 1)*ny + j][(nx - 2)*ny + j] = -1;
-		rhs[(nx - 1)*ny + j] = 0;
-	}
-
-	double coeff = viscosity / dy / dy;
-	for (int i = 1; i < nx - 1; i++)
-	for (int j = 1; j < ny - 1; j++){
-		int eq_ind = i * ny + j;
-		u_matrix[eq_ind][eq_ind] = 1 / dt + 2 * coeff;
-		u_matrix[eq_ind][eq_ind + 1] = -coeff;
-		u_matrix[eq_ind][eq_ind - 1] = -coeff;
-		double u_u_x = -u[eq_ind] * (u[eq_ind] - u[eq_ind - ny]) / dx;
-		double v_u_y = -v[eq_ind] * (u[eq_ind] - u[eq_ind - 1]) / dy;
-		rhs[eq_ind] = u[eq_ind] / dt + U(i*dx) * U_x(i*dx) + u_u_x + v_u_y;
-	}
-
-	FILE* result_f = fopen("velocity_field.txt", "w");
+	FILE* result_f;
+	fopen_s(&result_f, "velocity_field.txt", "w");
 
 #ifdef DEBUG_MATRIX
 	FILE* matrix_f;
@@ -181,69 +250,25 @@ int main(){
 
 #ifdef DEBUG_STEP
 	FILE* rhs_f;
-	rhs_f = fopen("rhs.txt", "w");
+	fopen_s(&rhs_f, "rhs.txt", "w");
 
 	FILE* debug_step_f;
-	debug_step_f = fopen("step.txt", "w");
+	fopen_s(&debug_step_f, "step.txt", "w");
 #endif // DEBUG_STEP
-
-	/*FILE* gnuplot_f = fopen("gif_script.plt", "w");
-	fprintf(gnuplot_f, "set terminal gif animate delay 50\n");
-	fprintf(gnuplot_f, "set output 'velocity_field.gif'\n");
-	fprintf(gnuplot_f, "stats 'field.txt'\n");
-	fprintf(gnuplot_f, "set xrange[0:%lf]\n", 0, length);
-	fprintf(gnuplot_f, "set yrange[0:%lf]\n", 0, height);
-	fprintf(gnuplot_f, "do for [i=1:int(STATS_blocks] {\n");
-	fprintf(gnuplot_f, "plot 'field.txt' )*/
 
 	for (int step = 0; step < step_num; step++){
 		printf("Step #%d of %d\n", step, step_num);
-		for (int i = 0; i < nxy; i++)
-		for (int j = 0; j < nxy; j++)
-			u_matrix_temp[i][j] = u_matrix[i][j];
+		fill_matrix_rhs(u_matrix, rhs, nx, ny, u, v, dx, dy, dt, viscosity);
 
-		for (int i = 0; i < nx; i++){
-			// на нижней границе u = 0
-			rhs[i * ny] = 0;
-			// на верхней границе u = U(x)
-			rhs[i*ny + ny - 1] = U(i*dx);
-		}
-		for (int j = 1; j < ny - 1; j++){
-			// на левой границе u = U(0)
-			rhs[j] = U(0);
-			// на правой границе u_x = 0
-			rhs[(nx - 1)*ny + j] = 0;
-		}
-
-		double max_d1 = 0;
-		double max_d2 = 0;
-		int d1_x=0, d1_y=0, d2_x=0, d2_y=0;
-		for (int i = 1; i < nx - 1; i++)
-		for (int j = 1; j < ny - 1; j++){
-			int eq_ind = i * ny + j;
-			double u_u_x = -u[eq_ind] * (u[eq_ind] - u[eq_ind - ny]) / dx;
-			double v_u_y = -v[eq_ind] * (u[eq_ind] - u[eq_ind - 1]) / dy;
-			rhs[eq_ind] = u[eq_ind] / dt + U(i*dx) * U_x(i*dx) + u_u_x + v_u_y;
-
-			if (abs(u_u_x) > max_d1){
-				d1_x = i;
-				d1_y = j;
-				max_d1 = abs(u_u_x);
-			}
-			if (abs(v_u_y) > max_d2){
-				d2_x = i;
-				d2_y = j;
-				max_d2 = abs(v_u_y);
-			}
-		}
-
-		printf("MAX ABS: u_x %lf [%d %d] u_y %lf [%d %d]\n", max_d1, d1_x, d1_y, max_d2, d2_x, d2_y);
-
-		bool code = Gauss(u_matrix_temp, rhs, new_u, nxy);
+		/* bool code = Gauss(u_matrix, rhs, new_u, nxy);
 		if (code == false){
 			printf("Gauss ERROR\n");
 			return -1;
-		}
+		}*/
+
+		for (int i = 0; i < nxy; i++)
+			new_u[i] = rhs[i];
+		gauss_zeidel(nxy, u_matrix, rhs, new_u, new_solution);
 
 		for (int i = 0; i < nxy; i++)
 			u[i] = new_u[i];
@@ -262,7 +287,7 @@ int main(){
 		for (int j = 1; j < ny - 1; j++){
 			// на правой границе v_y = 0
 			if (i == nx - 1)
-				v[i * ny + j] = v[i * ny + j - 1];
+				v[i * ny + j] = v[i * ny + j - ny];
 			// u_x + v_y = 0
 			else
 				v[i*ny + j] = v[i*ny + j - 1] + dy / dx * (new_u[i * ny + j] - new_u[(i - 1) * ny + j]);
@@ -270,7 +295,7 @@ int main(){
 
 		for (int i = 0; i < nx; i++){
 			for (int j = 0; j < ny; j++){
-				fprintf(result_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.1*u[i*ny + j],  0.1*v[i*ny + j]);
+				fprintf(result_f, "%lf %lf %lf %lf\n", i*dx, j*dy, u[i*ny + j],  v[i*ny + j]);
 			}
 		}
 
