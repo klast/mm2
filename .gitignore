@@ -1,0 +1,8 @@
+Debug/
+Release/
+mm2_4.*
+mm2_4/Debug
+mm2_4/Release
+mm2_4/mm2_4.*
+mm2_4/*.txt
+mm2_4/*.gif
