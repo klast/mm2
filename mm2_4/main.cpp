@@ -171,10 +171,11 @@ void fill_matrix_rhs(double** mt, double* rhs, int nx, int ny, double* u, double
 	for (int i = 1; i < nx - 1; i++)
 	for (int j = 1; j < ny - 1; j++){
 		int eq_ind = i * ny + j;
-		mt[eq_ind][eq_ind] = 1 / dt + 2 * coeff + u[eq_ind] / dx + v[eq_ind] / dy;
-		mt[eq_ind][eq_ind + 1] = -coeff;
-		mt[eq_ind][eq_ind - 1] = -coeff - v[eq_ind] / dy;
-		mt[eq_ind][eq_ind - ny] = -u[eq_ind] / dx;
+		mt[eq_ind][eq_ind] = 1 / dt + 2 * coeff ;
+		mt[eq_ind][eq_ind + 1] = -coeff + v[eq_ind] / dy * 0.5;
+		mt[eq_ind][eq_ind - 1] = -coeff - v[eq_ind] / dy * 0.5;
+		mt[eq_ind][eq_ind + ny] = u[eq_ind] / dx * 0.5;
+		mt[eq_ind][eq_ind - ny] = -u[eq_ind] / dx * 0.5;
 		//double u_u_x = -u[eq_ind] * (u[eq_ind] - u[eq_ind - ny]) / dx;
 		//double v_u_y = -v[eq_ind] * (u[eq_ind] - u[eq_ind - 1]) / dy;
 		rhs[eq_ind] = u[eq_ind] / dt + U(i*dx) * U_x(i*dx);
@@ -196,14 +197,14 @@ void fill_matrix_rhs(double** mt, double* rhs, int nx, int ny, double* u, double
 
 int main(){
 
-	double length = M_PI;
-	double height = 10;
+	double length = M_PI/4.0;
+	double height = 3;
 	double total_time = 2;
-	int step_num = 20;
+	int step_num = 200;
 	double dt = total_time / step_num;
 
-	int nx = 30;
-	int ny = 80;
+	int nx = 50;
+	int ny = 100;
 	int nxy = nx*ny;
 
 	double dx = length / (nx - 1.0);

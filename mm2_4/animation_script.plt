@@ -1,4 +1,4 @@
-set terminal gif animate delay 20
+set terminal gif animate delay 100
 set output 'velocity_animation.gif'
 stats 'velocity_field.txt' nooutput
 
