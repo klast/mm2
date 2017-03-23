@@ -196,20 +196,20 @@ void fill_matrix_rhs(double** mt, double* rhs, int nx, int ny, double* u, double
 
 int main(){
 
-	double length = M_PI/4.0;
-	double height = 0.1;
-	double total_time = 5;
-	int step_num = 250;
+	double length = M_PI/2.0;
+	double height = 0.2;
+	double total_time = 2;
+	int step_num = 100;
 	double dt = total_time / step_num;
 
-	int nx = 20;
+	int nx = 40;
 	int ny = 40;
 	int nxy = nx*ny;
 
 	double dx = length / (nx - 1.0);
 	double dy = height / (ny - 1.0);
 
-	double viscosity = 0.0012;
+	double viscosity = 0.001;
 
 	double* u = new double[nxy];
 	double* v = new double[nxy];
@@ -263,7 +263,7 @@ int main(){
 #endif // DEBUG_STEP
 
 	for (int step = 0; step < step_num; step++){
-		printf("Step #%d of %d\n", step, step_num);
+		printf("Step #%d of %d\n", step+1, step_num);
 		fill_matrix_rhs(u_matrix, rhs, nx, ny, u, v, dx, dy, dt, viscosity);
 
 		/* bool code = Gauss(u_matrix, rhs, new_u, nxy);
@@ -301,18 +301,20 @@ int main(){
 				v[i*ny + j] = v[i*ny + j - 1] + dy / dx * (new_u[i * ny + j] - new_u[(i - 1) * ny + j]);
 		}
 
-		for (int i = 0; i < nx; i++){
-			for (int j = 0; j < ny; j++){
-				fprintf(result_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.2*u[i*ny + j],  0.2*v[i*ny + j]);
-				fprintf(velocity_x_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.2*u[i*ny + j], 0.0);
-				fprintf(velocity_y_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.0, 0.2*v[i*ny + j]);
+		if (step % 3 == 0){
+			for (int i = 0; i < nx; i++){
+				for (int j = 0; j < ny; j++){
+					fprintf(result_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.2*u[i*ny + j], 0.2*v[i*ny + j] * height / length);
+					fprintf(velocity_x_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.2*u[i*ny + j], 0.0);
+					fprintf(velocity_y_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.0, 0.2*v[i*ny + j] * height / length);
+				}
 			}
-		}
 
-		if (step < step_num - 1){
-			fprintf(result_f, "\n\n");
-			fprintf(velocity_x_f, "\n\n");
-			fprintf(velocity_y_f, "\n\n");
+			if (step < step_num - 1){
+				fprintf(result_f, "\n\n");
+				fprintf(velocity_x_f, "\n\n");
+				fprintf(velocity_y_f, "\n\n");
+			}
 		}
 
 #ifdef DEBUG_STEP
