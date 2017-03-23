@@ -141,7 +141,6 @@ void fill_matrix_rhs(double** mt, double* rhs, int nx, int ny, double* u, double
 	for (int j = 0; j < nxy; j++)
 		mt[i][j] = 0;
 
-	// считаем u на новом шаге, причем u вычисляется независимо от v
 	for (int i = 0; i < nx; i++){
 		// на нижней границе u = 0
 		mt[i*ny][i*ny] = 1;
@@ -168,14 +167,14 @@ void fill_matrix_rhs(double** mt, double* rhs, int nx, int ny, double* u, double
 	int d1_x = 0, d1_y = 0, d2_x = 0, d2_y = 0;
 
 	double coeff = viscosity / dy / dy;
+
 	for (int i = 1; i < nx - 1; i++)
 	for (int j = 1; j < ny - 1; j++){
 		int eq_ind = i * ny + j;
-		mt[eq_ind][eq_ind] = 1 / dt + 2 * coeff ;
-		mt[eq_ind][eq_ind + 1] = -coeff + v[eq_ind] / dy * 0.5;
-		mt[eq_ind][eq_ind - 1] = -coeff - v[eq_ind] / dy * 0.5;
-		mt[eq_ind][eq_ind + ny] = u[eq_ind] / dx * 0.5;
-		mt[eq_ind][eq_ind - ny] = -u[eq_ind] / dx * 0.5;
+		mt[eq_ind][eq_ind] = 1 / dt + 2 * coeff +u[eq_ind] / dx + v[eq_ind] / dy;
+		mt[eq_ind][eq_ind + 1] = -coeff;
+		mt[eq_ind][eq_ind - 1] = -coeff - v[eq_ind] / dy;
+		mt[eq_ind][eq_ind - ny] = -u[eq_ind] / dx;
 		//double u_u_x = -u[eq_ind] * (u[eq_ind] - u[eq_ind - ny]) / dx;
 		//double v_u_y = -v[eq_ind] * (u[eq_ind] - u[eq_ind - 1]) / dy;
 		rhs[eq_ind] = u[eq_ind] / dt + U(i*dx) * U_x(i*dx);
@@ -198,13 +197,13 @@ void fill_matrix_rhs(double** mt, double* rhs, int nx, int ny, double* u, double
 int main(){
 
 	double length = M_PI/4.0;
-	double height = 3;
-	double total_time = 2;
-	int step_num = 200;
+	double height = 0.1;
+	double total_time = 5;
+	int step_num = 250;
 	double dt = total_time / step_num;
 
-	int nx = 50;
-	int ny = 100;
+	int nx = 20;
+	int ny = 40;
 	int nxy = nx*ny;
 
 	double dx = length / (nx - 1.0);
@@ -216,7 +215,7 @@ int main(){
 	double* v = new double[nxy];
 
 	double* new_u = new double[nxy];
-	double* new_solution = new double[nxy];
+	double* temp_u = new double[nxy];
 
 	double* rhs = new double[nxy];
 
@@ -233,10 +232,16 @@ int main(){
 	for (int i = 0; i < nxy; i++)
 		u_matrix_temp[i] = new double[nxy];
 
-	fill_matrix_rhs(u_matrix, rhs, nx, ny, u, v, dx, dy, dt, viscosity);
+	// fill_matrix_rhs(u_matrix, rhs, nx, ny, u, v, dx, dy, dt, viscosity);
 
 	FILE* result_f;
-	fopen_s(&result_f, "velocity_field.txt", "w");
+	fopen_s(&result_f, "velocity.txt", "w");
+
+	FILE* velocity_x_f; 
+	fopen_s(&velocity_x_f, "velocity_x.txt", "w");
+
+	FILE* velocity_y_f;
+	fopen_s(&velocity_y_f, "velocity_y.txt", "w");
 
 #ifdef DEBUG_MATRIX
 	FILE* matrix_f;
@@ -267,9 +272,11 @@ int main(){
 			return -1;
 		}*/
 
+		// задаем первое приближенное решение
 		for (int i = 0; i < nxy; i++)
 			new_u[i] = rhs[i];
-		gauss_zeidel(nxy, u_matrix, rhs, new_u, new_solution);
+
+		gauss_zeidel(nxy, u_matrix, rhs, new_u, temp_u);
 
 		for (int i = 0; i < nxy; i++)
 			u[i] = new_u[i];
@@ -296,12 +303,17 @@ int main(){
 
 		for (int i = 0; i < nx; i++){
 			for (int j = 0; j < ny; j++){
-				fprintf(result_f, "%lf %lf %lf %lf\n", i*dx, j*dy, u[i*ny + j],  v[i*ny + j]);
+				fprintf(result_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.2*u[i*ny + j],  0.2*v[i*ny + j]);
+				fprintf(velocity_x_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.2*u[i*ny + j], 0.0);
+				fprintf(velocity_y_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.0, 0.2*v[i*ny + j]);
 			}
 		}
 
-		if(step < step_num - 1)
+		if (step < step_num - 1){
 			fprintf(result_f, "\n\n");
+			fprintf(velocity_x_f, "\n\n");
+			fprintf(velocity_y_f, "\n\n");
+		}
 
 #ifdef DEBUG_STEP
 		fprintf(rhs_f, "RHS step %i\n", step);
@@ -329,6 +341,8 @@ int main(){
 	}
 
 	fclose(result_f);
+	fclose(velocity_x_f);
+	fclose(velocity_y_f);
 
 #ifdef DEBUG_STEP
 	fclose(debug_step_f);
