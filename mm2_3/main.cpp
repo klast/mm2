@@ -275,7 +275,8 @@ int main(){
 
 	fclose(result_f);
 	fclose(animation_f);
-
+	system("animation_script.plt");
+	system("profile.gif");
 #ifdef DEBUG_STEP
 	fclose(debug_step_f);
 	fclose(rhs_f);
