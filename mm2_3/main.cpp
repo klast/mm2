@@ -171,8 +171,9 @@ int main(){
 	for (int i = 0; i < nx; i++)
 		u_matrix[i] = new double[nx];
 
-	FILE* result_f;
+	FILE* result_f, *animation_f;
 	fopen_s(&result_f, "velocity.txt", "w");
+	fopen_s(&animation_f, "animation_data.txt", "w");
 
 	// по условию известно, что u(x, 0) = phi и u_y(x, 0) = 0
 	// значит первые слоя по y равны phi(x)
@@ -180,6 +181,11 @@ int main(){
 		u[i] = u[i + nx] = phi(i * dx);
 		printf("[%lf %lf] ", i*dx, phi(i*dx));
 	}
+
+	for (int i = 0; i < nx; i++){
+		fprintf(animation_f, "%lf %lf\n", i*dx, u[i]);
+	}
+	fprintf(animation_f, "\n\n");
 
 	for (int i = 0; i < nx; i++){
 		fprintf(result_f, "%lf ", u[i]);
@@ -230,9 +236,13 @@ int main(){
 		for (int i = 0; i < nx; i++)
 			u[y*nx + i] = new_u[i];
 
+		for (int i = 0; i < nx; i++){
+			fprintf(animation_f, "%lf %lf\n", i*dx, u[y*nx + i]);
+		}
+		fprintf(animation_f, "\n\n");
+
 		if (y % 2 == 0){
 			for (int i = 0; i < nx; i++){
-				// fprintf(result_f, "%lf %lf %lf\n", i*dx , y*dy, u[y*nx + i]);
 				fprintf(result_f, "%lf ", u[y*nx + i]);
 			}
 			fprintf(result_f, "\n");
@@ -264,6 +274,7 @@ int main(){
 	}
 
 	fclose(result_f);
+	fclose(animation_f);
 
 #ifdef DEBUG_STEP
 	fclose(debug_step_f);
