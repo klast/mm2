@@ -9,6 +9,8 @@
 
 #define EPS 0.0001
 
+// метод √аусса «ейдел€ вз€л с википедии
+
 // ”словие окончани€
 bool converge(double *xk, double *xkp, int n)
 {
@@ -50,87 +52,6 @@ void gauss_zeidel(int n, double** a, double* b, double* x, double* p){
 	} while (!converge(x, p, n));
 }
 
-void print_gnuplot_script(int ny){
-
-}
-
-bool Gauss(double **A, double *B, double *x, const int number) // ф-и€ решение системы методом √аусса
-{
-	try
-	{
-		int i, j, k;
-		double flag;
-		bool b;
-		bool NotHomogeneous = true;
-		for (i = 0; i < number - 1; i++)
-		{
-			if (A[i][i] == 0) // прохождение по диагональным элементам c проверкой равенства нулю
-			{
-				j = i + 1;
-				b = false;
-				while (b == false)
-				{
-					if (!(A[j][i] == 0))
-					{
-						for (k = 0; k < number; k++)
-						{
-							flag = A[i][k];
-							A[i][k] = A[j][k];
-							A[j][k] = flag;
-						}
-						flag = B[i];
-						B[i] = B[j];
-						B[j] = flag;
-						b = true;
-					}
-					j++;
-					if (j > number)
-					{
-						printf("It isn't homogeneous system\n");
-						NotHomogeneous = false;
-						return NotHomogeneous;
-					}
-				}
-			}
-			for (j = i + 1; j < number; j++) // j - номер строки
-			{
-				flag = A[j][i] / A[i][i];
-				for (k = i; k < number; k++)
-					A[j][k] = A[j][k] - A[i][k] * flag;
-				B[j] = B[j] - B[i] * flag;
-			}
-		}
-
-		for (i = 0; i < number; i++) // приведение к виду, где на диагонали сто€т единицы
-		{
-			flag = A[i][i];
-			for (j = i; j < number; j++)
-			{
-				A[i][j] = A[i][j] / flag;
-			}
-			B[i] = B[i] / flag;
-		}
-
-		for (i = 0; i < number; i++)
-			x[i] = 0;
-		x[number - 1] = B[number - 1];
-		for (i = number - 2; i >= 0; i--)
-		{
-			x[i] = B[i];
-			for (j = i + 1; j < number; j++)
-			{
-				x[i] = x[i] - A[i][j] * x[j];
-			}
-		}
-		return NotHomogeneous;
-	}
-	catch (std::exception e)
-	{
-		printf("ERROR at Gauss: %s\n", e.what());
-		return false;
-	}
-}
-
 inline double phi(double x){
 	return x*x/exp(x);
 }
@@ -155,8 +76,10 @@ int main(){
 	double dx = width / (nx - 1.0);
 	double dy = height / (ny - 1.0);
 
+	// этот коэффициент надо варьировать
 	double k = 1;
 
+	// хранитс€ полна€ истори€ - зачем? ѕрост :3
 	double* u = new double[nxy];
 
 	double* new_u = new double[nx];
@@ -179,9 +102,9 @@ int main(){
 	// значит первые сло€ по y равны phi(x)
 	for (int i = 0; i < nx; i++){
 		u[i] = u[i + nx] = phi(i * dx);
-		printf("[%lf %lf] ", i*dx, phi(i*dx));
 	}
 
+	// записываем начальное состо€ние в файл
 	for (int i = 0; i < nx; i++){
 		fprintf(animation_f, "%lf %lf\n", i*dx, u[i]);
 	}
@@ -192,10 +115,15 @@ int main(){
 	}
 	fprintf(result_f, "\n");
 
+
 	for (int i = 0; i < nx; i++)
 	for (int j = 0; j < nx; j++)
 		u_matrix[i][j] = 0;
 
+	//один раз заполн€ем матрицу согласно разностной схеме 
+	// * * *
+	//   *
+	//   *  
 	u_matrix[0][0] = 1;
 	u_matrix[nx - 1][nx - 1] = 1;
 	for (int i = 1; i < nx - 1; i++){
@@ -225,6 +153,8 @@ int main(){
 
 	for (int y = 2; y < ny; y++){
 		printf("Step #%d of %d\n", y + 1, ny);
+		
+		//заполн€ем правую часть (матрица не мен€етс€)
 		fill_rhs(rhs, nx, y, u, dy);
 
 		// задаем первое приближенное решение
@@ -233,6 +163,7 @@ int main(){
 
 		gauss_zeidel(nx, u_matrix, rhs, new_u, temp_u);
 
+		// копируем полученное решение в историю
 		for (int i = 0; i < nx; i++)
 			u[y*nx + i] = new_u[i];
 
