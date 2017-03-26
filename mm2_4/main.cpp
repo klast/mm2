@@ -9,7 +9,8 @@
 
 #define EPS 0.0001
 
-// Условие окончания
+// метод Гаусса Зейделя взят с википедии
+
 bool converge(double *xk, double *xkp, int n)
 {
 	double norm = 0;
@@ -50,83 +51,6 @@ void gauss_zeidel(int n, double** a, double* b, double* x, double* p){
 	} while (!converge(x, p, n));
 }
 
-bool Gauss(double **A, double *B, double *x, const int number) // ф-ия решение системы методом Гаусса
-{
-	try
-	{
-		int i, j, k;
-		double flag;
-		bool b;
-		bool NotHomogeneous = true;
-		for (i = 0; i < number - 1; i++)
-		{
-			if (A[i][i] == 0) // прохождение по диагональным элементам c проверкой равенства нулю
-			{
-				j = i + 1;
-				b = false;
-				while (b == false)
-				{
-					if (!(A[j][i] == 0))
-					{
-						for (k = 0; k < number; k++)
-						{
-							flag = A[i][k];
-							A[i][k] = A[j][k];
-							A[j][k] = flag;
-						}
-						flag = B[i];
-						B[i] = B[j];
-						B[j] = flag;
-						b = true;
-					}
-					j++;
-					if (j > number)
-					{
-						printf("It isn't homogeneous system\n");
-						NotHomogeneous = false;
-						return NotHomogeneous;
-					}
-				}
-			}
-			for (j = i + 1; j < number; j++) // j - номер строки
-			{
-				flag = A[j][i] / A[i][i];
-				for (k = i; k < number; k++)
-					A[j][k] = A[j][k] - A[i][k] * flag;
-				B[j] = B[j] - B[i] * flag;
-			}
-		}
-
-		for (i = 0; i < number; i++) // приведение к виду, где на диагонали стоят единицы
-		{
-			flag = A[i][i];
-			for (j = i; j < number; j++)
-			{
-				A[i][j] = A[i][j] / flag;
-			}
-			B[i] = B[i] / flag;
-		}
-
-		for (i = 0; i < number; i++)
-			x[i] = 0;
-		x[number - 1] = B[number - 1];
-		for (i = number - 2; i >= 0; i--)
-		{
-			x[i] = B[i];
-			for (j = i + 1; j < number; j++)
-			{
-				x[i] = x[i] - A[i][j] * x[j];
-			}
-		}
-		return NotHomogeneous;
-	}
-	catch (std::exception e)
-	{
-		printf("ERROR at Gauss: %s\n", e.what());
-		return false;
-	}
-}
-
 inline double U(double x){
 	return x * sin(x);
 }
@@ -162,10 +86,6 @@ void fill_matrix_rhs(double** mt, double* rhs, int nx, int ny, double* u, double
 		rhs[(nx - 1)*ny + j] = 0;
 	}
 
-	double max_d1 = 0;
-	double max_d2 = 0;
-	int d1_x = 0, d1_y = 0, d2_x = 0, d2_y = 0;
-
 	double coeff = viscosity / dy / dy;
 
 	for (int i = 1; i < nx - 1; i++)
@@ -175,27 +95,11 @@ void fill_matrix_rhs(double** mt, double* rhs, int nx, int ny, double* u, double
 		mt[eq_ind][eq_ind + 1] = -coeff;
 		mt[eq_ind][eq_ind - 1] = -coeff - v[eq_ind] / dy;
 		mt[eq_ind][eq_ind - ny] = -u[eq_ind] / dx;
-		//double u_u_x = -u[eq_ind] * (u[eq_ind] - u[eq_ind - ny]) / dx;
-		//double v_u_y = -v[eq_ind] * (u[eq_ind] - u[eq_ind - 1]) / dy;
 		rhs[eq_ind] = u[eq_ind] / dt + U(i*dx) * U_x(i*dx);
-
-		/*if (abs(u_u_x) > max_d1){
-			d1_x = i;
-			d1_y = j;
-			max_d1 = abs(u_u_x);
-		}
-		if (abs(v_u_y) > max_d2){
-			d2_x = i;
-			d2_y = j;
-			max_d2 = abs(v_u_y);
-		}*/
 	}
-
-	// printf("MAX ABS: u_x %lf [%d %d] u_y %lf [%d %d]\n", max_d1, d1_x, d1_y, max_d2, d2_x, d2_y);
 }
 
 int main(){
-
 	double width = M_PI/2.0;
 	double height = 0.2;
 	double total_time = 2;
@@ -213,8 +117,6 @@ int main(){
 
 	double* u = new double[nxy];
 	double* v = new double[nxy];
-
-	double* new_u = new double[nxy];
 	double* temp_u = new double[nxy];
 
 	double* rhs = new double[nxy];
@@ -227,15 +129,9 @@ int main(){
 	double** u_matrix = new double*[nxy];
 	for (int i = 0; i < nxy; i++)
 		u_matrix[i] = new double[nxy];
-	
-	double** u_matrix_temp = new double*[nxy];
-	for (int i = 0; i < nxy; i++)
-		u_matrix_temp[i] = new double[nxy];
 
-	// fill_matrix_rhs(u_matrix, rhs, nx, ny, u, v, dx, dy, dt, viscosity);
-
-	FILE* result_f;
-	fopen_s(&result_f, "velocity.txt", "w");
+	FILE* velocity_f;
+	fopen_s(&velocity_f, "velocity.txt", "w");
 
 	FILE* velocity_x_f; 
 	fopen_s(&velocity_x_f, "velocity_x.txt", "w");
@@ -264,22 +160,16 @@ int main(){
 
 	for (int step = 0; step < step_num; step++){
 		printf("Step #%d of %d\n", step+1, step_num);
-		fill_matrix_rhs(u_matrix, rhs, nx, ny, u, v, dx, dy, dt, viscosity);
 
-		/* bool code = Gauss(u_matrix, rhs, new_u, nxy);
-		if (code == false){
-			printf("Gauss ERROR\n");
-			return -1;
-		}*/
+		// заполняем матрицу и правую часть
+		fill_matrix_rhs(u_matrix, rhs, nx, ny, u, v, dx, dy, dt, viscosity);
 
 		// задаем первое приближенное решение
 		for (int i = 0; i < nxy; i++)
-			new_u[i] = rhs[i];
+			u[i] = rhs[i];
 
-		gauss_zeidel(nxy, u_matrix, rhs, new_u, temp_u);
-
-		for (int i = 0; i < nxy; i++)
-			u[i] = new_u[i];
+		// находим значения u на новом шаге решая слау
+		gauss_zeidel(nxy, u_matrix, rhs, u, temp_u);
 
 		// считаем значения v на новом шаге через уравнение u_x + v_y = 0
 		// условие на левой границе v = 0
@@ -298,20 +188,21 @@ int main(){
 				v[i * ny + j] = v[i * ny + j - ny];
 			// u_x + v_y = 0
 			else
-				v[i*ny + j] = v[i*ny + j - 1] + dy / dx * (new_u[i * ny + j] - new_u[(i - 1) * ny + j]);
+				v[i*ny + j] = v[i*ny + j - 1] + dy / dx * (u[i * ny + j] - u[(i - 1) * ny + j]);
 		}
 
+		// каждый третий шаг выводим результат
 		if (step % 3 == 0){
 			for (int i = 0; i < nx; i++){
 				for (int j = 0; j < ny; j++){
-					fprintf(result_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.2*u[i*ny + j], 0.2*v[i*ny + j] * height / width);
+					fprintf(velocity_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.2*u[i*ny + j], 0.2*v[i*ny + j] * height / width);
 					fprintf(velocity_x_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.2*u[i*ny + j], 0.0);
 					fprintf(velocity_y_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.0, 0.2*v[i*ny + j] * height / width);
 				}
 			}
 
 			if (step < step_num - 1){
-				fprintf(result_f, "\n\n");
+				fprintf(velocity_f, "\n\n");
 				fprintf(velocity_x_f, "\n\n");
 				fprintf(velocity_y_f, "\n\n");
 			}
@@ -342,7 +233,7 @@ int main(){
 #endif // DEBUG_STEP
 	}
 
-	fclose(result_f);
+	fclose(velocity_f);
 	fclose(velocity_x_f);
 	fclose(velocity_y_f);
 
