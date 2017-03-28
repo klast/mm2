@@ -127,7 +127,7 @@ int main(){
 	u_matrix[0][0] = 1;
 	u_matrix[nx - 1][nx - 1] = 1;
 	for (int i = 1; i < nx - 1; i++){
-		u_matrix[i][i] = 1 / dy / dy + 2 / dx / dx - k;
+		u_matrix[i][i] = 1 / dy / dy + 2 / dx / dx + k;
 		u_matrix[i][i - 1] = - 1 / dx / dx;
 		u_matrix[i][i + 1] = - 1 / dx /dx;
 	}
