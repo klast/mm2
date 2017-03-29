@@ -1,15 +1,15 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
+#define _USE_MATH_DEFINES
+#include <cstdlib>
+#include <cstdio>
+#include <cmath>
 #include <iostream>
 using namespace std;
-#define M_PI 3.1415926535897932384626433832795
-int N = 50; int M = 50;
 
-double k = 20,
-epsilon = 0.1,
-Y0 = 0.5;
-
+const int N = 50;
+const int M = 50;
+const double k = 20;
+const double epsilon = 0.1;
+const double Y0 = 0.5;
 
 bool Gauss(double **Aa, double *Bb, double *x, const int & number) // ф-ия решение системы методом Гаусса
 {
@@ -120,23 +120,6 @@ double func(double y)
 	return res;
 }
 
-
-
-//void printmatrix(double **A, double *B, int N, int M, FILE *pFile) 
-//{
-//	for (int i = 0; i < M * N; i++) {
-//		for (int j = 0; j < M * N; j++)
-//		{
-//			if (int(A[i][j]) != 0)
-//				fprintf(pFile, "%1.1lf ", A[i][j]);
-//			else
-//				fprintf(pFile, "    ");
-//		}
-//		fprintf(pFile, "	%1.1lf\n", B[i]);
-//	}
-//	fprintf(pFile, "\n\n");
-//}
-
 void printanswer(double *A, int N, int M, FILE *pFile)
 {
 	int I = N * 1;
@@ -178,7 +161,6 @@ int main()
 	for (int i = 0; i < M * N; i++)
 	for (int j = 0; j < M * N; j++)
 		matrix[i][j] = 0;
-
 	
 	for (int i = 0; i < N*M; i++)
 		matrix[i][i] = 1;
@@ -208,14 +190,11 @@ int main()
 	for (int i = 0; i < M; i++)
 		F[i] = func(i * delta_y);
 
-
 	Gauss(matrix, F, U, M * N);
 	for (int i = 0; i < M; i++) cout << U[i*M] << "   " << U[(i + 1)*N - 1] << endl;
 	fopen_s(&pFile, "answer.txt", "w");
 	printanswer(U, M, N, pFile);
 	fclose(pFile);
-
-
-
+	system("plot_script.plt");
 	return 0;
 }
