@@ -79,7 +79,7 @@ int main()
     double dy = height / (ny - 1.0);
 
     // этот коэффициент надо варьировать
-    double k = 1;
+    double k = 5;
 
     // хранится полная история - зачем? Прост :3
     vector<double> u(nxy),new_u(nx),temp_u(nx),rhs(nx);
@@ -211,4 +211,7 @@ int main()
     fclose(debug_step_f);
     fclose(rhs_f);
 #endif //DEBUG_STEP
+	system("plot_script.plt");
+	system("animation_script.plt");
+	system("profile.gif");
 }

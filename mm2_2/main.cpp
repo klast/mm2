@@ -9,113 +9,28 @@ using namespace std;
 
 const int N = 50;
 const int M = 50;
-const double k = 20;
-const double epsilon = 0.1;
+const double k = 19;
+double epsilon = 0.25;
 const double Y0 = 0.5;
 
-bool Gauss(vector<vector<double>> & A, vector<double> & B, vector<double> & x, const int & number) // ф-и¤ решение системы методом √аусса
-{
-    try
-    {
-        int i, j, k;
-        double flag;
-        bool b;
-        bool NotHomogeneous = true;
-        for (i = 0; i < number - 1; i++)
-        {
-            if (A[i][i] == 0) // прохождение по диагональным элементам c проверкой равенства нулю
-            {
-                j = i + 1;
-                b = false;
-                while (b == false)
-                {
-                    if (!(A[j][i] == 0))
-                    {
-                        for (k = 0; k < number; k++)
-                        {
-                            swap(A[i][k], A[j][k]);
-                        }
-                        swap(B[i], B[j]);
-                        b = true;
-                    }
-                    j++;
-                    if (j > number)
-                    {
-                        cout << "It isn't homogeneous system" << endl;
-                        NotHomogeneous = false;
-                        return NotHomogeneous;
-                    }
-                }
-            }
-            for (j = i + 1; j < number; j++) // j - номер строки
-            {
-                flag = A[j][i] / A[i][i];
-                for (k = i; k < number; k++)
-                    A[j][k] -= A[i][k] * flag;
-                B[j] -= B[i] * flag;
-            }
-        }
-
-        for (i = 0; i < number; i++) // приведение к виду, где на диагонали сто¤т единицы
-        {
-            flag = A[i][i];
-            for (j = i; j < number; j++)
-            {
-                A[i][j] /= flag;
-            }
-            B[i] /= flag;
-        }
-        fill(x.begin(), x.begin() + number, 0);
-        x[number - 1] = B[number - 1];
-        for (i = number - 2; i >= 0; i--)
-        {
-            x[i] = B[i];
-            for (j = i + 1; j < number; j++)
-            {
-                x[i] -= A[i][j] * x[j];
-            }
-        }
-        return NotHomogeneous;
-    }
-    catch (exception& e)
-    {
-        cout << "ERROR at Gauss\n";
-        cout << e.what() << endl;
-        return false;
-    }
-}
+bool Gauss(vector<vector<double>> & A, vector<double> & B, vector<double> & x, const int & number);
 
 double func(double y)
 {
     const int NN = 10000;
     double res = 0;
-#pragma omp parallel for reduction(+:res)
     for (int i = 0; i <= NN; i++)
         res += sin(i*Y0)*sin(i*y);
     res = res * 2 / (double)NN;
     return res;
 }
 
-inline double phi(double y)  //сюда ставим свою функцию
+inline double phi(double y)
 {
     return (cosh(0.5) - cosh(y - 0.5));
 }
 
-void printanswer(vector<double> & A, int N, int M, FILE *pFile)
-{
-    int I = N * 1;
-    for (int i = 0; i < M; i++)
-    {
-        for (int j = 1; j < N; j++)
-        {
-            fprintf(pFile, "%1.6lf	", A[I]);
-            I++;
-        }
-        fprintf(pFile, "\n");
-    }
-    fprintf(pFile, "\n\n");
-}
-
+void printanswer(vector<double> & A, int N, int M, FILE *pFile);
 
 int main()
 {
@@ -172,4 +87,91 @@ int main()
     fclose(pFile);
     system("plot_script.plt");
     return 0;
+}
+
+bool Gauss(vector<vector<double>> & A, vector<double> & B, vector<double> & x, const int & number) // ф-и¤ решение системы методом √аусса
+{
+	try
+	{
+		int i, j, k;
+		double flag;
+		bool b;
+		bool NotHomogeneous = true;
+		for (i = 0; i < number - 1; i++)
+		{
+			if (A[i][i] == 0) // прохождение по диагональным элементам c проверкой равенства нулю
+			{
+				j = i + 1;
+				b = false;
+				while (b == false)
+				{
+					if (!(A[j][i] == 0))
+					{
+						for (k = 0; k < number; k++)
+						{
+							swap(A[i][k], A[j][k]);
+						}
+						swap(B[i], B[j]);
+						b = true;
+					}
+					j++;
+					if (j > number)
+					{
+						cout << "It isn't homogeneous system" << endl;
+						NotHomogeneous = false;
+						return NotHomogeneous;
+					}
+				}
+			}
+			for (j = i + 1; j < number; j++) // j - номер строки
+			{
+				flag = A[j][i] / A[i][i];
+				for (k = i; k < number; k++)
+					A[j][k] -= A[i][k] * flag;
+				B[j] -= B[i] * flag;
+			}
+		}
+
+		for (i = 0; i < number; i++) // приведение к виду, где на диагонали сто¤т единицы
+		{
+			flag = A[i][i];
+			for (j = i; j < number; j++)
+			{
+				A[i][j] /= flag;
+			}
+			B[i] /= flag;
+		}
+		fill(x.begin(), x.begin() + number, 0);
+		x[number - 1] = B[number - 1];
+		for (i = number - 2; i >= 0; i--)
+		{
+			x[i] = B[i];
+			for (j = i + 1; j < number; j++)
+			{
+				x[i] -= A[i][j] * x[j];
+			}
+		}
+		return NotHomogeneous;
+	}
+	catch (exception& e)
+	{
+		cout << "ERROR at Gauss\n";
+		cout << e.what() << endl;
+		return false;
+	}
+}
+
+void printanswer(vector<double> & A, int N, int M, FILE *pFile)
+{
+	int I = N * 1;
+	for (int i = 0; i < M; i++)
+	{
+		for (int j = 1; j < N; j++)
+		{
+			fprintf(pFile, "%1.6lf	", A[I]);
+			I++;
+		}
+		fprintf(pFile, "\n");
+	}
+	fprintf(pFile, "\n\n");
 }
