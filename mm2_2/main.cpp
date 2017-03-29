@@ -98,7 +98,7 @@ double func(double y)
 
 inline double phi(double y)  //сюда ставим свою функцию
 {
-    return y*(cosh(0.5) - cosh(y - 0.5));
+    return (cosh(0.5) - cosh(y - 0.5));
 }
 
 void printanswer(vector<double> & A, int N, int M, FILE *pFile)
