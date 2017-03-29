@@ -1,8 +1,10 @@
 #define _USE_MATH_DEFINES
-#include <stdio.h>
-#include <math.h>
+#include <cstdio>
+#include <cmath>
 #include <exception>
 #include <algorithm>
+#include <vector>
+using namespace std;
 
 // #define DEBUG_MATRIX
 // #define DEBUG_STEP
@@ -10,7 +12,7 @@
 #define EPS 0.0001
 
 // Условие окончания
-bool converge(double *xk, double *xkp, int n)
+bool converge(vector<double> & xk, vector<double> & xkp, int n)
 {
     double norm = 0;
     for (int i = 0; i < n; i++)
@@ -32,12 +34,11 @@ b[n] - Столбец правых частей
 также в массив x[n] следует поместить начальное
 приближение столбца решений (например, все нули)
 */
-void gauss_zeidel(int n, double** a, double* b, double* x, double* p)
+void gauss_zeidel(int n, vector<vector<double>> & a, vector<double> &  b, vector<double> & x, vector<double> & p)
 {
     do
     {
-        for (int i = 0; i < n; i++)
-            p[i] = x[i];
+        copy(x.begin(), x.end(), p.begin());  
         for (int i = 0; i < n; i++)
         {
             double var = 0;
@@ -52,10 +53,10 @@ void gauss_zeidel(int n, double** a, double* b, double* x, double* p)
 
 inline double phi(double x)
 {
-    return x*x / exp(x);
+    return sin(x) * exp(-x);
 }
 
-void fill_rhs(double* rhs, int nx, int y, double* u, double dy)
+void fill_rhs(vector<double> & rhs, int nx, int y, vector<double> & u, double dy)
 {
     rhs[0] = 0;
     rhs[nx - 1] = 0;
@@ -81,19 +82,11 @@ int main()
     double k = 1;
 
     // хранится полная история - зачем? Прост :3
-    double* u = new double[nxy];
-
-    double* new_u = new double[nx];
-    double* temp_u = new double[nx];
-
-    double* rhs = new double[nx];
-
-    for (int i = 0; i < nxy; i++)
-        u[i] = 0;
-
-    double** u_matrix = new double*[nx];
+    vector<double> u(nxy),new_u(nx),temp_u(nx),rhs(nx);
+    vector<vector<double>> u_matrix(nx);
+ 
     for (int i = 0; i < nx; i++)
-        u_matrix[i] = new double[nx];
+        u_matrix[i] = vector<double>(nx);
 
     FILE* result_f, *animation_f;
     fopen_s(&result_f, "velocity.txt", "w");
@@ -119,10 +112,6 @@ int main()
     }
     fprintf(result_f, "\n");
 
-
-    for (int i = 0; i < nx; i++)
-        for (int j = 0; j < nx; j++)
-            u_matrix[i][j] = 0;
 
     //один раз заполняем матрицу согласно разностной схеме 
     // * * *
@@ -165,8 +154,7 @@ int main()
         fill_rhs(rhs, nx, y, u, dy);
 
         // задаем первое приближенное решение
-        for (int i = 0; i < nx; i++)
-            new_u[i] = rhs[i];
+        copy(rhs.begin(), rhs.end(), new_u.begin());  
 
         gauss_zeidel(nx, u_matrix, rhs, new_u, temp_u);
 
@@ -218,9 +206,7 @@ int main()
     }
 
     fclose(result_f);
-    fclose(animation_f);
-    system("animation_script.plt");
-    system("profile.gif");
+    fclose(animation_f);   
 #ifdef DEBUG_STEP
     fclose(debug_step_f);
     fclose(rhs_f);
