@@ -3,3 +3,11 @@ mm2_3/*.txt
 mm2_3/*.gif
 mm2_4/*.txt
 mm2_4/*.gif
+*/Release
+*.txt
+*.sln
+*.db
+*.vcxproj
+*.filters
+*.opendb
+*.suo
