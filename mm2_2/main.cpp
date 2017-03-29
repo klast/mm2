@@ -1,4 +1,4 @@
-#define _USE_MATH_DEFINES
+п»ї#define _USE_MATH_DEFINES
 #include <cstdlib>
 #include <cstdio>
 #include <cmath>
@@ -11,7 +11,7 @@ const double k = 20;
 const double epsilon = 0.1;
 const double Y0 = 0.5;
 
-bool Gauss(double **Aa, double *Bb, double *x, const int & number) // ф-ия решение системы методом Гаусса
+bool Gauss(double **Aa, double *Bb, double *x, const int & number) // С„-РёВ¤ СЂРµС€РµРЅРёРµ СЃРёСЃС‚РµРјС‹ РјРµС‚РѕРґРѕРј в€љР°СѓСЃСЃР°
 {
 	try
 	{
@@ -33,7 +33,7 @@ bool Gauss(double **Aa, double *Bb, double *x, const int & number) // ф-ия решен
 		bool NotHomogeneous = true;
 		for (i = 0; i < number - 1; i++)
 		{
-			if (A[i][i] == 0) // прохождение по диагональным элементам c проверкой равенства нулю
+			if (A[i][i] == 0) // РїСЂРѕС…РѕР¶РґРµРЅРёРµ РїРѕ РґРёР°РіРѕРЅР°Р»СЊРЅС‹Рј СЌР»РµРјРµРЅС‚Р°Рј c РїСЂРѕРІРµСЂРєРѕР№ СЂР°РІРµРЅСЃС‚РІР° РЅСѓР»СЋ
 			{
 				j = i + 1;
 				b = false;
@@ -61,7 +61,7 @@ bool Gauss(double **Aa, double *Bb, double *x, const int & number) // ф-ия решен
 					}
 				}
 			}
-			for (j = i + 1; j < number; j++) // j - номер строки
+			for (j = i + 1; j < number; j++) // j - РЅРѕРјРµСЂ СЃС‚СЂРѕРєРё
 			{
 				flag = A[j][i] / A[i][i];
 				for (k = i; k < number; k++)
@@ -70,7 +70,7 @@ bool Gauss(double **Aa, double *Bb, double *x, const int & number) // ф-ия решен
 			}
 		}
 
-		for (i = 0; i < number; i++) // приведение к виду, где на диагонали стоят единицы
+		for (i = 0; i < number; i++) // РїСЂРёРІРµРґРµРЅРёРµ Рє РІРёРґСѓ, РіРґРµ РЅР° РґРёР°РіРѕРЅР°Р»Рё СЃС‚РѕВ¤С‚ РµРґРёРЅРёС†С‹
 		{
 			flag = A[i][i];
 			for (j = i; j < number; j++)
@@ -112,12 +112,9 @@ double func(double y)
 	return res;
 }
 
- double phi(double y)  //сюда ставим свою функцию
-{
-	double res;
-	res = y * (1 - y)*(0.5 - y)*(0.5 - y);
-	//res = y*(cosh(0.5) - cosh(y - 0.5));
-	return res;
+inline double phi(double y)  //СЃСЋРґР° СЃС‚Р°РІРёРј СЃРІРѕСЋ С„СѓРЅРєС†РёСЋ
+{ 
+	return y*(cosh(0.5) - cosh(y - 0.5));
 }
 
 void printanswer(double *A, int N, int M, FILE *pFile)
