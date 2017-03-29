@@ -7,8 +7,10 @@
 // #define DEBUG_MATRIX
 // #define DEBUG_STEP
 
-#define EPS 0.0001
+using namespace std;
 
+#define EPS 0.0001
+#define SPEED_EPS 0.0
 // метод Гаусса Зейделя взят с википедии
 
 bool converge(double *xk, double *xkp, int n)
@@ -101,13 +103,13 @@ void fill_matrix_rhs(double** mt, double* rhs, int nx, int ny, double* u, double
 
 int main(){
 	double width = M_PI/2.0;
-	double height = 0.2;
-	double total_time = 2;
+	double height = 1;
+	double total_time = 4;
 	int step_num = 100;
 	double dt = total_time / step_num;
 
-	int nx = 40;
-	int ny = 40;
+	int nx = 41;
+	int ny = 41;
 	int nxy = nx*ny;
 
 	double dx = width / (nx - 1.0);
@@ -138,6 +140,9 @@ int main(){
 
 	FILE* velocity_y_f;
 	fopen_s(&velocity_y_f, "velocity_y.txt", "w");
+
+	FILE* delta_f;
+	fopen_s(&delta_f, "delta.txt", "w");
 
 #ifdef DEBUG_MATRIX
 	FILE* matrix_f;
@@ -191,10 +196,33 @@ int main(){
 				v[i*ny + j] = v[i*ny + j - 1] + dy / dx * (u[i * ny + j] - u[(i - 1) * ny + j]);
 		}
 
+		// проходим по каждому
+		for (int i = 0; i < nx - 1; i++){
+			double min_delta = 1;
+			for (int j = 0; j < ny; j++){
+				double delta = abs(U(i*dx) - u[i*ny + j]);
+				delta /= abs(U(i*dx));
+				if (delta < min_delta)
+					min_delta = delta;
+				if (delta < SPEED_EPS){
+					fprintf(delta_f, "%lf\n", j*dy);
+					break;
+				}
+			}
+			/*if (min_delta >= SPEED_EPS){
+				fprintf(delta_f, "%lf\n", dy*(ny-1));
+			}*/
+			//printf("Delta %lf\n", min_delta);
+		}
+		if (step < step_num - 1){
+			fprintf(delta_f, "\n\n");
+		}
+
+
 		// каждый третий шаг выводим результат
 		if (step % 3 == 0){
-			for (int i = 0; i < nx; i++){
-				for (int j = 0; j < ny; j++){
+			for (int i = 0; i < nx; i+=2){
+				for (int j = 0; j < ny; j+=2){
 					fprintf(velocity_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.2*u[i*ny + j], 0.2*v[i*ny + j] * height / width);
 					fprintf(velocity_x_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.2*u[i*ny + j], 0.0);
 					fprintf(velocity_y_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.0, 0.2*v[i*ny + j] * height / width);
@@ -233,6 +261,7 @@ int main(){
 #endif // DEBUG_STEP
 	}
 
+	fclose(delta_f);
 	fclose(velocity_f);
 	fclose(velocity_x_f);
 	fclose(velocity_y_f);
