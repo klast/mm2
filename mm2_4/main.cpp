@@ -104,7 +104,7 @@ void fill_matrix_rhs(double** mt, double* rhs, int nx, int ny, double* u, double
 int main() {
 	double width = M_PI/2.0;
 	double height = 1.2;
-	double total_time = 0.1;
+	double total_time = 0.8;
 	int step_num = 50;
 	double dt = total_time / step_num;
 
@@ -127,6 +127,11 @@ int main() {
 		u[i] = 0;
 		v[i] = 0;
 	}
+
+	for(int i=0; i<nx; i++)
+		for (int j = 0; j < ny; j++) {
+			u[i*ny + j] = U(i*dx);
+		}
 
 	double** u_matrix = new double*[nxy];
 	for (int i = 0; i < nxy; i++)
@@ -227,12 +232,14 @@ int main() {
 		{
 			fopen_s(&slice_f, "slice.txt", "w");
 			for (int i = 0; i < ny; i++) {
-				fprintf(slice_f, "%lf %lf %lf\n", i*dy, u[int(nx *(0.8 / width))* ny + i], v[int(nx *(0.1 / 0.7))* ny + i]);
+				fprintf(slice_f, "%lf %lf %lf\n", i*dy, u[int(nx * (0.2 / width))* ny + i], v[int(nx *(0.1 / 0.7))* ny + i]);
 			}
 			fclose(slice_f);
 
 		}
-		printf("%lf %d\n", nx*0.1/0.8, int(nx*0.1/0.8));
+
+
+		printf("%lf \n", U(0.1));
 		printf("%lf %lf\n", u[nx / 2 * ny + ny - 1], u[nx / 2 * ny + ny - 2]);
 
 		// каждый третий шаг выводим результат
