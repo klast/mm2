@@ -10,7 +10,7 @@
 using namespace std;
 
 #define EPS 0.0001
-#define SPEED_EPS 0.0
+#define SPEED_EPS 0.1
 // метод Гаусса Зейделя взят с википедии
 
 bool converge(double *xk, double *xkp, int n)
@@ -102,10 +102,10 @@ void fill_matrix_rhs(double** mt, double* rhs, int nx, int ny, double* u, double
 }
 
 int main() {
-	double width = M_PI / 2.0;
-	double height = 0.15;
-	double total_time = 1.1;
-	int step_num = 100;
+	double width = M_PI/2.0;
+	double height = 1.2;
+	double total_time = 0.1;
+	int step_num = 50;
 	double dt = total_time / step_num;
 
 	int nx = 41;
@@ -145,7 +145,7 @@ int main() {
 	fopen_s(&delta_f, "delta.txt", "w");
 
 	FILE* slice_f;
-	fopen_s(&slice_f, "slice.txt", "w");
+	//fopen_s(&slice_f, "slice.txt", "w");
 
 #ifdef DEBUG_MATRIX
 	FILE* matrix_f;
@@ -191,12 +191,12 @@ int main() {
 
 		for (int i = 1; i < nx; i++)
 			for (int j = 1; j < ny - 1; j++) {
-				// на правой границе v_y = 0
+				// на правой границе v_x = 0
 				if (i == nx - 1)
 					v[i * ny + j] = v[i * ny + j - ny];
 				// u_x + v_y = 0
 				else
-					v[i*ny + j] = v[i*ny + j - 1] + dy / dx * (u[i * ny + j] - u[(i - 1) * ny + j]);
+					v[i * ny + j] = v[i * ny + j - 1] - dy / dx * (u[i * ny + j] - u[(i - 1) * ny + j]);
 			}
 
 		// проходим по каждому
@@ -221,11 +221,18 @@ int main() {
 			fprintf(delta_f, "\n\n");
 		}
 
-		if (step == step_num - 2) {
+
+
+		//if (step == step_num - 2) 
+		{
+			fopen_s(&slice_f, "slice.txt", "w");
 			for (int i = 0; i < ny; i++) {
-				fprintf(slice_f, "%lf \n", u[nx / 2 * ny + i]);
+				fprintf(slice_f, "%lf %lf %lf\n", i*dy, u[int(nx *(0.8 / width))* ny + i], v[int(nx *(0.1 / 0.7))* ny + i]);
 			}
+			fclose(slice_f);
+
 		}
+		printf("%lf %d\n", nx*0.1/0.8, int(nx*0.1/0.8));
 		printf("%lf %lf\n", u[nx / 2 * ny + ny - 1], u[nx / 2 * ny + ny - 2]);
 
 		// каждый третий шаг выводим результат
