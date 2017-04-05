@@ -10,9 +10,8 @@
 using namespace std;
 
 #define EPS 0.0001
-#define SPEED_EPS 0.1
-// метод Гаусса Зейделя взят с википедии
 
+// метод Гаусса Зейделя взят с википедии
 bool converge(double *xk, double *xkp, int n)
 {
 	double norm = 0;
@@ -90,6 +89,7 @@ void fill_matrix_rhs(double** mt, double* rhs, int nx, int ny, double* u, double
 
 	double coeff = viscosity / dy / dy;
 
+	// схема крест, с прошлого шага берем значения производные u_x и u_y
 	for (int i = 1; i < nx - 1; i++)
 		for (int j = 1; j < ny - 1; j++) {
 			int eq_ind = i * ny + j;
@@ -102,12 +102,25 @@ void fill_matrix_rhs(double** mt, double* rhs, int nx, int ny, double* u, double
 }
 
 int main() {
-	double width = M_PI/2.0;
+	// вязкость жидкости - важный параметр, при высокой вязкости лучше передается движение и схема ведет себя адекватнее
+	// но это не точно
+	double viscosity = 0.01;
+
+	// ширина и высота области
+	double width = M_PI / 2.0;
 	double height = 1.2;
+
+	// общее время, для которого проводится расчет и число временных шагов
 	double total_time = 0.8;
 	int step_num = 50;
 	double dt = total_time / step_num;
 
+	// срезы при фиксированном x в момент времени total_time
+	// чтобы больше срезов выводить, редактируем файл slice.plt, чтобы он брал больше данных
+	const int slices_num = 2;
+	double slices_x[slices_num] = { 0.1, 0.2 };
+
+	// размеры сетки
 	int nx = 41;
 	int ny = 41;
 	int nxy = nx*ny;
@@ -115,42 +128,46 @@ int main() {
 	double dx = width / (nx - 1.0);
 	double dy = height / (ny - 1.0);
 
-	double viscosity = 0.01;
-
+	// вертикальная (u) и горизонтальная (v) составляющие скорости
+	// эти массивы (и схожие далее) заполняются по оси y в первую очередь
+	// т.е. элементы u[0], u[5] соответствуют элементам (0,0) и (0,5) 
 	double* u = new double[nxy];
 	double* v = new double[nxy];
+	// массив для хранения приближенног орешения 
 	double* temp_u = new double[nxy];
-
+	// правая часть системы
 	double* rhs = new double[nxy];
 
+	// начальное распределение нулевое
 	for (int i = 0; i < nxy; i++) {
 		u[i] = 0;
 		v[i] = 0;
 	}
 
-	for(int i=0; i<nx; i++)
+	// но чтобы проверить, что решение сильно зависит от начального распределения
+	// можно стартовать с другого заполнения u0(x,y)=U(x) (комментированный блок ниже)
+	
+	/*for(int i=0; i<nx; i++)
 		for (int j = 0; j < ny; j++) {
 			u[i*ny + j] = U(i*dx);
-		}
+		}*/
 
+	// матрица коэффициентов СЛАУ
 	double** u_matrix = new double*[nxy];
 	for (int i = 0; i < nxy; i++)
 		u_matrix[i] = new double[nxy];
 
+	// файл с данными для анимации суммарной скорости
 	FILE* velocity_f;
 	fopen_s(&velocity_f, "velocity.txt", "w");
-
+	// файл с данными для анимации скорости по x
 	FILE* velocity_x_f;
 	fopen_s(&velocity_x_f, "velocity_x.txt", "w");
-
+	// файл с данными для анимации скорости по y
 	FILE* velocity_y_f;
 	fopen_s(&velocity_y_f, "velocity_y.txt", "w");
-
-	FILE* delta_f;
-	fopen_s(&delta_f, "delta.txt", "w");
-
+	// файл для сохранения среза по y при фиксированном x в конечный момент времени
 	FILE* slice_f;
-	//fopen_s(&slice_f, "slice.txt", "w");
 
 #ifdef DEBUG_MATRIX
 	FILE* matrix_f;
@@ -204,60 +221,36 @@ int main() {
 					v[i * ny + j] = v[i * ny + j - 1] - dy / dx * (u[i * ny + j] - u[(i - 1) * ny + j]);
 			}
 
-		// проходим по каждому
-		for (int i = 0; i < nx - 1; i++) {
-			double min_delta = 1;
-			for (int j = 0; j < ny; j++) {
-				double delta = abs(U(i*dx) - u[i*ny + j]);
-				delta /= abs(U(i*dx));
-				if (delta < min_delta)
-					min_delta = delta;
-				if (delta < SPEED_EPS) {
-					fprintf(delta_f, "%lf\n", j*dy);
-					break;
-				}
+		// печатаем срез с фиксированным x для текущего момента времени
+		// таким образом, расчет можно остановить и посмотреть полученный профиль
+		// в силу того, что файл перезаписывается, в итоге в нем оказывается конечный профиль (т.е. в момент времени total_time)
+		fopen_s(&slice_f, "slice.txt", "w");
+		for (int i = 0; i < ny; i++) {
+			fprintf(slice_f, "%lf ", i*dy);
+			for (int slice = 0; slice < slices_num; slice++) {
+				fprintf(slice_f, "%lf ", u[int(nx * (slices_x[slice] / width))* ny + i]);
 			}
-			/*if (min_delta >= SPEED_EPS){
-			fprintf(delta_f, "%lf\n", dy*(ny-1));
-			}*/
-			//printf("Delta %lf\n", min_delta);
+			fprintf(slice_f, "\n");
 		}
-		if (step < step_num - 1) {
-			fprintf(delta_f, "\n\n");
-		}
+		fclose(slice_f);
 
-
-
-		//if (step == step_num - 2) 
-		{
-			fopen_s(&slice_f, "slice.txt", "w");
-			for (int i = 0; i < ny; i++) {
-				fprintf(slice_f, "%lf %lf %lf\n", i*dy, u[int(nx * (0.2 / width))* ny + i], v[int(nx *(0.1 / 0.7))* ny + i]);
-			}
-			fclose(slice_f);
-
-		}
-
-
-		printf("%lf \n", U(0.1));
+		// если схема разваливается, то она разваливается с верхнего правого края (для моей функции)
+		// с помощью этого вывода можно заметить, когда значения начнут блуждать или расти и остановить рассчет
 		printf("%lf %lf\n", u[nx / 2 * ny + ny - 1], u[nx / 2 * ny + ny - 2]);
 
-		// каждый третий шаг выводим результат
-		//if (step % 3 == 0) 
-		{
-			for (int i = 0; i < nx; i += 4) {
-				for (int j = 0; j < ny; j += 4) {
-					fprintf(velocity_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.2*u[i*ny + j], 0.2*v[i*ny + j] * height / width);
-					fprintf(velocity_x_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.2*u[i*ny + j], 0.0);
-					fprintf(velocity_y_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.0, 0.2*v[i*ny + j] * height / width);
-				}
+		// прорежая сетку в четыре раза выводим точки для анимации поля скоростей
+		for (int i = 0; i < nx; i += 4) {
+			for (int j = 0; j < ny; j += 4) {
+				fprintf(velocity_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.2*u[i*ny + j], 0.2*v[i*ny + j] * height / width);
+				fprintf(velocity_x_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.2*u[i*ny + j], 0.0);
+				fprintf(velocity_y_f, "%lf %lf %lf %lf\n", i*dx, j*dy, 0.0, 0.2*v[i*ny + j] * height / width);
 			}
+		}
 
-			if (step < step_num - 1) {
-				fprintf(velocity_f, "\n\n");
-				fprintf(velocity_x_f, "\n\n");
-				fprintf(velocity_y_f, "\n\n");
-			}
+		if (step < step_num - 1) {
+			fprintf(velocity_f, "\n\n");
+			fprintf(velocity_x_f, "\n\n");
+			fprintf(velocity_y_f, "\n\n");
 		}
 
 #ifdef DEBUG_STEP
@@ -285,7 +278,6 @@ int main() {
 #endif // DEBUG_STEP
 	}
 
-	fclose(delta_f);
 	fclose(velocity_f);
 	fclose(velocity_x_f);
 	fclose(velocity_y_f);
