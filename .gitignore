@@ -1,8 +1,10 @@
 Projects/
+mm2_2/*.txt
 mm2_3/*.txt
 mm2_3/*.gif
 mm2_4/*.txt
 mm2_4/*.gif
+<<<<<<< HEAD
 */Release
 *.txt
 *.sln
@@ -11,3 +13,7 @@ mm2_4/*.gif
 *.filters
 *.opendb
 *.suo
+=======
+mm2_4/*.png
+mm2_4/*.bak
+>>>>>>> 51e2f0c534db849220132ae6bc94580d60a402d6
